@@ -1,0 +1,13 @@
+{
+  "logs": {
+    "v": [
+      "ilk log",
+      "ikinci log"
+    ],
+    "e": null
+  },
+  "x": {
+    "v": 10,
+    "e": null
+  }
+}
