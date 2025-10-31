@@ -17,6 +17,8 @@ class UsemiDB {
     this.autoCleanInterval = options.autoCleanInterval ?? 60_000; // 60s
     this.events = {}; // eventName -> [callbacks]
 
+    this._startTime = Date.now(); // stats için
+
     // in-memory store: keys -> { v: value, e: expiresAt|null }
     this.data = {};
 
@@ -45,11 +47,9 @@ class UsemiDB {
     try {
       const raw = fs.readFileSync(this.filePath, "utf-8");
       const parsed = JSON.parse(raw);
-      // normalize parsed -> internal format { v, e }
       this.data = this._normalizeLoaded(parsed);
     } catch (err) {
       console.error("UsemiDB: JSON parse hatası, yedekten yüklemeye çalışılıyor...", err.message);
-      // try backup
       if (fs.existsSync(this.backupFile)) {
         try {
           const braw = fs.readFileSync(this.backupFile, "utf-8");
@@ -62,15 +62,11 @@ class UsemiDB {
           console.error("UsemiDB: Backup da bozuk. Temiz DB başlatılıyor.", err2.message);
         }
       }
-      // fallback
       this.data = {};
     }
   }
 
   _normalizeLoaded(parsed) {
-    // Stored format on disk is previous internal format:
-    // key -> { v: value, e: expiresAt|null }
-    // But earlier versions may have plain values. Convert them.
     const out = {};
     for (const k of Object.keys(parsed)) {
       const item = parsed[k];
@@ -82,21 +78,17 @@ class UsemiDB {
       ) {
         out[k] = { v: item.v, e: item.e };
       } else {
-        // plain old format -> wrap
         out[k] = { v: item, e: null };
       }
     }
     return out;
   }
 
-  // Save (async)
   async save() {
     try {
-      // create backup first
       if (fs.existsSync(this.filePath)) {
         await fs.promises.copyFile(this.filePath, this.backupFile);
       }
-      // prepare plain JSON for disk: keep same structure { key: { v, e } }
       const plain = {};
       for (const k of Object.keys(this.data)) {
         plain[k] = this.data[k];
@@ -143,7 +135,6 @@ class UsemiDB {
       try {
         const removed = this._cleanExpiredSync();
         if (removed && removed.length > 0) {
-          // save if something removed
           this.save();
           for (const k of removed) this._emit("expired", k);
         }
@@ -151,7 +142,6 @@ class UsemiDB {
         console.error("UsemiDB: cleaner hata:", err);
       }
     }, this.autoCleanInterval);
-    // node won't keep process alive just for this timer if it's unref'd
     if (this._cleaner.unref) this._cleaner.unref();
   }
 
@@ -159,7 +149,6 @@ class UsemiDB {
     return entry.e !== null && Date.now() >= entry.e;
   }
 
-  // Sync cleaner used by interval (returns removed keys)
   _cleanExpiredSync() {
     const removed = [];
     for (const k of Object.keys(this.data)) {
@@ -171,7 +160,6 @@ class UsemiDB {
     return removed;
   }
 
-  // Public manual cleaner (async)
   async cleanExpired() {
     const removed = this._cleanExpiredSync();
     if (removed.length > 0) {
@@ -182,11 +170,6 @@ class UsemiDB {
   }
 
   // ---------------- Core API ----------------
-
-  /**
-   * set(key, value, ttlMs)
-   * - ttlMs optional: milliseconds
-   */
   async set(key, value, ttlMs = null) {
     const expiresAt = typeof ttlMs === "number" && ttlMs > 0 ? Date.now() + ttlMs : null;
     this.data[key] = { v: value, e: expiresAt };
@@ -195,14 +178,11 @@ class UsemiDB {
     return true;
   }
 
-  // get returns raw value or null if not present/expired
   get(key) {
     const entry = this.data[key];
     if (!entry) return null;
     if (this._isExpiredEntry(entry)) {
-      // expired: remove sync and emit
       delete this.data[key];
-      // schedule save (non-blocking)
       this.save().catch(() => {});
       this._emit("expired", key);
       return null;
@@ -231,7 +211,6 @@ class UsemiDB {
     return true;
   }
 
-  // push: ensures an array at key, pushes value
   async push(key, value) {
     let entry = this.data[key];
     if (!entry || entry.v === undefined || entry.v === null) {
@@ -239,7 +218,6 @@ class UsemiDB {
       this.data[key] = entry;
     }
     if (!Array.isArray(entry.v)) {
-      // if not array, convert to array [old, new]
       entry.v = [entry.v];
     }
     entry.v.push(value);
@@ -249,7 +227,6 @@ class UsemiDB {
   }
 
   all({ includeMeta = false } = {}) {
-    // includeMeta = false -> return plain values only
     if (!includeMeta) {
       const out = {};
       for (const k of Object.keys(this.data)) {
@@ -259,7 +236,6 @@ class UsemiDB {
       }
       return out;
     } else {
-      // returns internal objects { v, e }
       return { ...this.data };
     }
   }
@@ -269,6 +245,34 @@ class UsemiDB {
     await this.save();
     this._emit("clear");
     return true;
+  }
+
+  // ---------------- Stats ----------------
+  stats() {
+    const keys = Object.keys(this.data);
+    const totalKeys = keys.length;
+    const keysWithTTL = keys.filter(k => this.data[k].e !== null).length;
+    const expiredCount = keys.filter(k => this._isExpiredEntry(this.data[k])).length;
+
+    let fileSize = 0;
+    try {
+      const stats = fs.statSync(this.filePath);
+      fileSize = stats.size;
+    } catch (err) {
+      fileSize = 0;
+    }
+
+    const memSize = Buffer.byteLength(JSON.stringify(this.data), "utf-8");
+
+    return {
+      totalKeys,
+      keysWithTTL,
+      expiredCount,
+      fileSize,
+      memSize,
+      autoSave: !!this.autoSave,
+      uptimeMs: Date.now() - this._startTime
+    };
   }
 }
 
