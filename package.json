@@ -1,6 +1,6 @@
 {
  "name": "usemidb",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Basit, güvenli ve TTL destekli JSON tabanlı Node.js veritabanı (CroxyDB alternatifi)",
   "main": "index.js",
   "author": "Lorely",
