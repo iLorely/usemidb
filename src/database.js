@@ -274,6 +274,65 @@ class UsemiDB {
       uptimeMs: Date.now() - this._startTime
     };
   }
+
+  // ---------------- Collection System ----------------
+  createCollection(name) {
+    if (!name || typeof name !== "string") {
+      throw new Error("collection name must be string");
+    }
+    return new UsemiCollection(this, name);
+  }
+
+  collection(name) {
+    return this.createCollection(name);
+  }
+}
+
+// =========================================
+// Collection class
+// =========================================
+
+class UsemiCollection {
+  constructor(db, name) {
+    this.db = db;
+    this.name = name;
+  }
+
+  _key(key) {
+    return `${this.name}:${key}`;
+  }
+
+  async set(key, value, ttl = null) {
+    return this.db.set(this._key(key), value, ttl);
+  }
+
+  get(key) {
+    return this.db.get(this._key(key));
+  }
+
+  has(key) {
+    return this.db.has(this._key(key));
+  }
+
+  async delete(key) {
+    return this.db.delete(this._key(key));
+  }
+
+  async push(key, value) {
+    return this.db.push(this._key(key), value);
+  }
+
+  all() {
+    const out = {};
+    const raw = this.db.all();
+    for (const k of Object.keys(raw)) {
+      if (k.startsWith(this.name + ":")) {
+        const trimmed = k.replace(this.name + ":", "");
+        out[trimmed] = raw[k];
+      }
+    }
+    return out;
+  }
 }
 
 module.exports = UsemiDB;
