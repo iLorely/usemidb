@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const NamespaceManager = require("./namespace.js");
 
 class UsemiDB {
   /**
@@ -30,6 +31,9 @@ class UsemiDB {
 
     // start TTL cleaner
     this._startCleaner();
+
+    // Namespace manager
+    this.namespace = new NamespaceManager(this);
   }
 
   // ---------------- File helpers ----------------

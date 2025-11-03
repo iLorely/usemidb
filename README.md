@@ -58,6 +58,30 @@ db.on("expired", (key) => {
 // stats
 console.log(db.stats());
 ```
+---
+
+🗂️ Namespace Kullanımı
+
+Birden fazla proje, sunucu veya modül için anahtarları ayırmak istiyorsan namespace sistemi kullanılır.
+Arka planda key’ler namespace:key formatında saklanır.
+
+```bash
+// ayarla
+await db.namespace.set("guild1", "prefix", "!");
+
+// al
+const prefix = await db.namespace.get("guild1", "prefix");
+console.log(prefix); // !
+
+// sil
+await db.namespace.delete("guild1", "prefix");
+
+// var mı?
+console.log(await db.namespace.has("guild1", "prefix"));
+
+// tüm keyleri listele
+console.log(await db.namespace.keys("guild1"));
+```
 
 ---
 
