@@ -85,8 +85,13 @@ console.log(await db.namespace.keys("guild1"));
 
 ---
 
-## 📦 NPM SAYFASI
+## 📦 NPM Sayfası
 [UsemiDB NPM Paketi](https://www.npmjs.com/package/usemidb)
+
+---
+
+## 🐈 Github Sayfası
+[UsemiDB Github](https://github.com/iLorely/usemidb)
 
 ---
 
