@@ -3,29 +3,60 @@ class NamespaceManager {
     this.db = db;
   }
 
-  _key(ns, key) {
-    return `${ns}:${key}`;
-  }
+  use(name) {
+    return {
+      set: async (key, value, ttl) => {
+        return this.db.set(`${name}:${key}`, value, ttl);
+      },
+      get: (key) => {
+        return this.db.get(`${name}:${key}`);
+      },
+      delete: async (key) => {
+        return this.db.delete(`${name}:${key}`);
+      },
+      has: (key) => {
+        return this.db.has(`${name}:${key}`);
+      },
+      all: () => {
+        const raw = this.db.all();
+        const out = {};
+        for (const k of Object.keys(raw)) {
+          if (k.startsWith(name + ":")) {
+            const trimmed = k.replace(name + ":", "");
+            out[trimmed] = raw[k];
+          }
+        }
+        return out;
+      },
+      query: (fn) => {
+        const now = Date.now();
+        const raw = this.db.all({ includeMeta: true });
+        const out = {};
 
-  async set(ns, key, value) {
-    return await this.db.set(this._key(ns, key), value);
-  }
+        for (const k of Object.keys(raw)) {
+          if (!k.startsWith(name + ":")) continue;
 
-  async get(ns, key) {
-    return await this.db.get(this._key(ns, key));
-  }
+          const trimmed = k.replace(name + ":", "");
+          const entry = raw[k];
 
-  async delete(ns, key) {
-    return await this.db.delete(this._key(ns, key));
-  }
+          if (entry.e !== null && now >= entry.e) continue;
 
-  async has(ns, key) {
-    return await this.db.has(this._key(ns, key));
-  }
+          const item = {
+            key: trimmed,
+            value: entry.v,
+            expiresAt: entry.e
+          };
 
-  async keys(ns) {
-    const all = await this.db.keys();
-    return all.filter(k => k.startsWith(`${ns}:`));
+          try {
+            if (fn(item)) {
+              out[trimmed] = entry.v;
+            }
+          } catch {}
+        }
+
+        return out;
+      },
+    };
   }
 }
 
