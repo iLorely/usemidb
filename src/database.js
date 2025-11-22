@@ -11,7 +11,6 @@ function query(store, filterFn) {
   for (const key of Object.keys(store)) {
     const entry = store[key];
     if (!entry) continue;
-
     if (entry.e !== null && now >= entry.e) continue;
 
     const item = { key, value: entry.v, expiresAt: entry.e };
@@ -19,7 +18,6 @@ function query(store, filterFn) {
       if (filterFn(item.value, item.key)) results.push(item);
     } catch (_) {}
   }
-
   return results;
 }
 
@@ -29,6 +27,11 @@ class UsemiDB {
     this.backupFile = this.filePath + ".bak";
     this.autoSave = options.autoSave ?? true;
     this.autoCleanInterval = options.autoCleanInterval ?? 60_000;
+    
+    // Performans: Yazma gecikmesi
+    this.writeDelay = options.writeDelay ?? 100; 
+    this._saveTimer = null;
+
     this.events = {};
     this._startTime = Date.now();
     this.data = {};
@@ -81,10 +84,21 @@ class UsemiDB {
   }
 
   async save() {
-    try {
-      if (fs.existsSync(this.filePath)) await fs.promises.copyFile(this.filePath, this.backupFile);
-      if (this.autoSave) await fs.promises.writeFile(this.filePath, JSON.stringify(this.data, null, 2), "utf-8");
-    } catch (err) {}
+    if (!this.autoSave) return;
+    
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+
+    this._saveTimer = setTimeout(async () => {
+        try {
+            if (fs.existsSync(this.filePath)) {
+                await fs.promises.copyFile(this.filePath, this.backupFile);
+            }
+            const content = JSON.stringify(this.data, null, 2);
+            await fs.promises.writeFile(this.filePath, content, "utf-8");
+        } catch (err) {
+            console.error("UsemiDB Save Error:", err);
+        }
+    }, this.writeDelay);
   }
 
   on(eventName, cb) {
@@ -156,7 +170,7 @@ class UsemiDB {
     if (!entry) return false;
     delete this.data[key];
     await this.save();
-    this._emit("delete", key, entry.v);
+    this._emit("delete", key, entry?.v);
     return true;
   }
 
@@ -168,6 +182,72 @@ class UsemiDB {
     await this.save();
     this._emit("push", key, value);
     return entry.v;
+  }
+
+  async pull(key, value) {
+    let entry = this.data[key];
+    if (!entry || !Array.isArray(entry.v)) return false;
+    const initialLength = entry.v.length;
+    entry.v = entry.v.filter(item => item !== value);
+    if (entry.v.length !== initialLength) {
+        await this.save();
+        this._emit("pull", key, value);
+        return true;
+    }
+    return false;
+  }
+
+  async add(key, count) {
+    if(typeof count !== 'number') throw new Error("UsemiDB: .add() için sayısal değer girin.");
+    let entry = this.data[key];
+    let currentVal = (entry && typeof entry.v === 'number') ? entry.v : 0;
+    
+    // Mevcut TTL süresini korumak için (Varsa)
+    let remainingTTL = null;
+    if(entry && entry.e) {
+        const timeLeft = entry.e - Date.now();
+        if(timeLeft > 0) remainingTTL = timeLeft;
+    }
+
+    const newVal = currentVal + count;
+    await this.set(key, newVal, remainingTTL);
+    return newVal;
+  }
+
+  async subtract(key, count) {
+    if(typeof count !== 'number') throw new Error("UsemiDB: .subtract() için sayısal değer girin.");
+    return this.add(key, -count);
+  }
+
+  // 🔥 YENİ: Toggle (Boolean Değiştirici)
+  async toggle(key) {
+      const entry = this.data[key];
+      const currentVal = entry ? !!entry.v : false; // Yoksa false kabul et
+      const newVal = !currentVal;
+      
+      // TTL koruma mantığı
+      let remainingTTL = null;
+      if(entry && entry.e) {
+          const timeLeft = entry.e - Date.now();
+          if(timeLeft > 0) remainingTTL = timeLeft;
+      }
+      
+      await this.set(key, newVal, remainingTTL);
+      return newVal;
+  }
+
+  // 🔥 YENİ: Rename (İsim Değiştirme)
+  async rename(oldKey, newKey) {
+      if(!this.has(oldKey)) return false;
+      if(this.has(newKey)) throw new Error(`UsemiDB: "${newKey}" anahtarı zaten var, üzerine yazamam.`);
+
+      const entry = this.data[oldKey];
+      this.data[newKey] = entry;
+      delete this.data[oldKey];
+      
+      await this.save();
+      this._emit("rename", oldKey, newKey);
+      return true;
   }
 
   all({ includeMeta = false } = {}) {
@@ -212,6 +292,15 @@ class UsemiCollection {
   has(key) { return this.db.has(this._key(key)); }
   async delete(key) { return this.db.delete(this._key(key)); }
   async push(key, value) { return this.db.push(this._key(key), value); }
+  
+  async pull(key, value) { return this.db.pull(this._key(key), value); }
+  async add(key, count) { return this.db.add(this._key(key), count); }
+  async subtract(key, count) { return this.db.subtract(this._key(key), count); }
+  
+  // Collection için toggle ve rename
+  async toggle(key) { return this.db.toggle(this._key(key)); }
+  async rename(oldKey, newKey) { return this.db.rename(this._key(oldKey), this._key(newKey)); }
+
   all() {
     const out = {};
     const raw = this.db.all();

@@ -1,90 +1,128 @@
-# UsemiDB
+# UsemiDB 🚀
 
-UsemiDB, Node.js projeleri için **hafif, JSON tabanlı bir key-value database** sistemidir.
-TTL (zaman aşımı), otomatik yedekleme, event sistemi ve collection desteği ile **basit ama güçlü bir veri yönetim kütüphanesidir**.
+UsemiDB, Node.js projeleri için **hafif, hızlı ve JSON tabanlı bir key-value database** sistemidir.
+TTL (zaman aşımı), otomatik yedekleme, event sistemi, **gelişmiş matematiksel işlemler** ve collection desteği ile **basit ama güçlü bir veri yönetim kütüphanesidir**.
 
 ---
 
 ## ⚡ Özellikler
 
 - **Key-Value Store**: Basit `set`, `get`, `delete`, `has`, `push` metodları.
-- **TTL Desteği**: Her veri için süreli (expiration) kaydı.
+- **Matematiksel İşlemler**: `add`, `subtract` ile tek satırda bakiye yönetimi.
+- **Akıllı Liste Yönetimi**: `push` ile ekle, `pull` ile listeden veri sil.
+- **Toggle & Rename**: Boolean değerleri tersine çevirme ve anahtar adı değiştirme.
+- **Performans**: `writeDelay` ile disk yazma işlemleri optimize edilmiştir (Debounce).
+- **TTL Desteği**: Her veri için süreli (expiration) kayıt imkanı.
 - **Otomatik Temizleme**: TTL süresi dolan veriler otomatik olarak silinir.
-- **Event Sistemi**: `set`, `delete`, `push`, `expired`, `clear` eventleri.
-- **Yedekleme**: DB dosyası bozulursa `.bak` yedeğiyle kurtarma.
-- **Collections**: İstediğiniz namespace içinde veri gruplama.
-- **Stats**: Dosya boyutu, hafıza kullanımı, TTL istatistikleri.
-- **Full JSON Storage**: Tüm veriler JSON formatında saklanır.
+- **Event Sistemi**: `set`, `delete`, `push`, `expired`, `clear` ve `rename` eventleri.
+- **Yedekleme**: DB dosyası bozulursa `.bak` yedeğiyle otomatik kurtarma.
+- **Collections**: Verileri gruplamak için gelişmiş namespace desteği.
 
 ---
 
-## 🔹 ÖRNEK KULLANIM
+## 🔹 Örnek Kullanım
 
 ```bash
+npm install usemidb
+🔹 HIZLI BAŞLANGIÇ
+JavaScript
+
 const UsemiDB = require("usemidb");
 const db = new UsemiDB({
-  filePath: "./usemidb/usemidb.json", // opsiyonel
-  autoSave: true,                      // default true
-  autoCleanInterval: 60000             // TTL temizleme aralığı (ms)
+  filePath: "./database/data.json", // Kayıt dosyası
+  autoSave: true,                   // Otomatik kaydetme
+  writeDelay: 100,                  // Performans için yazma gecikmesi (ms)
+  autoCleanInterval: 60000          // TTL temizleme aralığı (ms)
 });
 
-// set & get
-await db.set("user_1", { name: "Serkan" }, 10000); // 10 saniye TTL
-const user = db.get("user_1");
+(async () => {
+    // 🟢 Basit Veri Kaydı (TTL: 10 saniye)
+    await db.set("user_1", { name: "Lorely" }, 10000);
+    
+    const user = db.get("user_1");
+    console.log(user); // { name: "Lorely" }
 
-// push (array veri)
-await db.push("numbers", 42);
-await db.push("numbers", 7);
-console.log(db.get("numbers")); // [42, 7]
+    // 🟢 Matematiksel İşlemler (Para/XP Sistemi)
+    await db.set("bakiye", 100);
+    await db.add("bakiye", 50);      // 150 olur
+    await db.subtract("bakiye", 20); // 130 olur
+    console.log(db.get("bakiye"));   // 130
 
-// delete
-await db.delete("numbers");
+    // 🟢 Liste (Array) İşlemleri
+    await db.push("etiketler", "javascript");
+    await db.push("etiketler", "nodejs");
+    await db.push("etiketler", "python");
+    
+    // Listeden eleman silme (pull)
+    await db.pull("etiketler", "python"); 
+    console.log(db.get("etiketler")); // ["javascript", "nodejs"]
 
-// has
-console.log(db.has("numbers")); // false
+    // 🟢 Toggle (Aç/Kapat)
+    // "bakim_modu" yoksa oluşturur ve true yapar, varsa tersine çevirir.
+    await db.toggle("bakim_modu"); 
+    console.log(db.get("bakim_modu")); // true
 
-// all & clear
-console.log(db.all());
-await db.clear();
+    // 🟢 Rename (Anahtar Adı Değiştirme)
+    await db.rename("user_1", "admin_1");
+    console.log(db.get("admin_1")); // { name: "Lorely" }
+})();
+🗂️ Collection (Namespace) Kullanımı
+Verilerinizi kategorize etmek (örn: kullanıcılar, sunucular, ayarlar) için collection sistemini kullanabilirsiniz.
 
-// events
-db.on("set", (key, value, expiresAt) => {
-  console.log(`Key set: ${key} => ${value}`);
+JavaScript
+
+// "users" adında bir koleksiyon oluştur
+const users = db.collection("users");
+
+// Veriler otomatik olarak "users:ahmet" şeklinde saklanır
+await users.set("ahmet", { age: 25 });
+
+// Koleksiyona özel matematik işlemi
+await users.add("ahmet_para", 500);
+
+// Sadece bu koleksiyondaki verileri çek
+console.log(users.all()); 
+📡 Event (Olay) Sistemi
+Veritabanında gerçekleşen değişiklikleri dinleyebilirsiniz.
+
+JavaScript
+
+db.on("set", (key, value) => {
+  console.log(`[KAYIT] ${key} eklendi:`, value);
 });
+
 db.on("expired", (key) => {
-  console.log(`Key expired: ${key}`);
+  console.log(`[SİLİNDİ] ${key} süresi doldu.`);
 });
 
-// stats
+db.on("rename", (oldKey, newKey) => {
+  console.log(`[DEĞİŞTİ] ${oldKey} -> ${newKey} oldu.`);
+});
+📊 İstatistikler
+JavaScript
+
 console.log(db.stats());
+/* Çıktı:
+{
+  totalKeys: 15,
+  keysWithTTL: 2,
+  expiredCount: 0,
+  fileSize: 1024,
+  memSize: 512,
+  uptimeMs: 5200
+}
+*/
 ```
----
 
-🗂️ Namespace Kullanımı
-
-Birden fazla proje, sunucu veya modül için anahtarları ayırmak istiyorsan namespace sistemi kullanılır.
-Arka planda key’ler namespace:key formatında saklanır.
+## 💻 Kurulum
 
 ```bash
-// ayarla
-await db.namespace.set("guild1", "prefix", "!");
-
-// al
-const prefix = await db.namespace.get("guild1", "prefix");
-console.log(prefix); // !
-
-// sil
-await db.namespace.delete("guild1", "prefix");
-
-// var mı?
-console.log(await db.namespace.has("guild1", "prefix"));
-
-// tüm keyleri listele
-console.log(await db.namespace.keys("guild1"));
+npm install usemidb
 ```
 
 ---
 
+# 🔗 Linkler
 ## 📦 NPM Sayfası
 [UsemiDB NPM Paketi](https://www.npmjs.com/package/usemidb)
 
@@ -92,11 +130,3 @@ console.log(await db.namespace.keys("guild1"));
 
 ## 🐈 Github Sayfası
 [UsemiDB Github](https://github.com/iLorely/usemidb)
-
----
-
-## 💻 Kurulum
-
-```bash
-npm install usemidb
-```

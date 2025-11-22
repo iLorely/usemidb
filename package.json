@@ -1,11 +1,11 @@
 {
  "name": "usemidb",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "Basit, güvenli ve TTL destekli JSON tabanlı Node.js veritabanı",
   "main": "index.js",
   "author": "Lorely",
   "license": "MIT",
-  "keywords": ["database", "json", "ttl", "usemidb", "db", "json database", "json db", "nodejs database", "nodejs db", "nodejs json database", "ts db", "typescript database", "typescript db", "typescript json database"],
+  "keywords": ["usemi", "database", "json", "ttl", "usemidb", "db", "json database", "json db", "nodejs database", "nodejs db", "nodejs json database", "js db","ts db", "typescript database", "typescript db", "typescript json database", "usemidb"],
   "repository": {
     "type": "git",
     "url": "https://github.com/iLorely/usemidb"

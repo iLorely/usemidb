@@ -4,6 +4,11 @@ declare module "usemidb" {
     filePath?: string;
     autoSave?: boolean;
     autoCleanInterval?: number; // ms
+    /**
+     * Performans için yazma gecikmesi (ms).
+     * Varsayılan: 100ms
+     */
+    writeDelay?: number;
   }
 
   interface StoredEntry<T = any> {
@@ -21,7 +26,8 @@ declare module "usemidb" {
     uptimeMs: number;
   }
 
-  type EventName = "set" | "delete" | "push" | "expired" | "clear";
+  // "rename" olayını da ekledik
+  type EventName = "set" | "delete" | "push" | "pull" | "expired" | "clear" | "rename";
 
   type EventCallback = (...args: any[]) => void;
 
@@ -37,6 +43,16 @@ declare module "usemidb" {
     has(id: string): boolean;
     delete(id: string): Promise<boolean>;
     push(id: string, value: any): Promise<any[]>;
+    pull(id: string, value: any): Promise<boolean>;
+    add(id: string, count: number): Promise<number>;
+    subtract(id: string, count: number): Promise<number>;
+    
+    /** Bir anahtarın boolean değerini tersine çevirir (true <-> false) */
+    toggle(id: string): Promise<boolean>;
+
+    /** Bir anahtarın adını değiştirir */
+    rename(oldId: string, newId: string): Promise<boolean>;
+
     all(): Record<string, T>;
     clear(): Promise<boolean>;
   }
@@ -50,23 +66,31 @@ declare module "usemidb" {
     has(key: string): boolean;
     delete(key: string): Promise<boolean>;
     push<T = any>(key: string, value: T): Promise<T[]>;
+    pull<T = any>(key: string, value: T): Promise<boolean>;
+    add(key: string, count: number): Promise<number>;
+    subtract(key: string, count: number): Promise<number>;
+
+    /**
+     * Bir anahtarın değerini tersine çevirir (true -> false, false -> true).
+     * Eğer değer yoksa 'true' olarak oluşturur.
+     */
+    toggle(key: string): Promise<boolean>;
+
+    /**
+     * Bir anahtarın ismini değiştirir.
+     * @throws Yeni anahtar ismi zaten varsa hata fırlatır.
+     */
+    rename(oldKey: string, newKey: string): Promise<boolean>;
+
     all<T = any>(options?: AllOptions): Record<string, T> | Record<string, StoredEntry<T>>;
     clear(): Promise<boolean>;
 
-    /** ✅ stats **/
     stats(): Stats;
-
-    /** ✅ Events */
     on(eventName: EventName, callback: EventCallback): () => void;
     off(eventName: EventName, callback: EventCallback): void;
-
-    /** ✅ Clean expired */
     cleanExpired(): Promise<string[]>;
-
-    /** ✅ Namespaced collections */
     collection<T = any>(namespace: string): CollectionOps<T>;
   }
 
   export = UsemiDB;
 }
-
