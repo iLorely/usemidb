@@ -26,15 +26,12 @@ declare module "usemidb" {
     uptimeMs: number;
   }
 
-  // "rename" olayını da ekledik
   type EventName = "set" | "delete" | "push" | "pull" | "expired" | "clear" | "rename";
-
   type EventCallback = (...args: any[]) => void;
 
   interface AllOptions {
     includeMeta?: boolean;
   }
-
 
   /** ✅ Collection API */
   interface CollectionOps<T = any> {
@@ -46,17 +43,18 @@ declare module "usemidb" {
     pull(id: string, value: any): Promise<boolean>;
     add(id: string, count: number): Promise<number>;
     subtract(id: string, count: number): Promise<number>;
-    
-    /** Bir anahtarın boolean değerini tersine çevirir (true <-> false) */
     toggle(id: string): Promise<boolean>;
-
-    /** Bir anahtarın adını değiştirir */
     rename(oldId: string, newId: string): Promise<boolean>;
+
+    /**
+     * Koleksiyon içinden rastgele veri(ler) getirir.
+     * @param count İstenen veri sayısı (Varsayılan: 1)
+     */
+    random(count?: number): Promise<T | T[] | null>;
 
     all(): Record<string, T>;
     clear(): Promise<boolean>;
   }
-
 
   class UsemiDB {
     constructor(options?: UsemiDBOptions);
@@ -69,18 +67,15 @@ declare module "usemidb" {
     pull<T = any>(key: string, value: T): Promise<boolean>;
     add(key: string, count: number): Promise<number>;
     subtract(key: string, count: number): Promise<number>;
-
-    /**
-     * Bir anahtarın değerini tersine çevirir (true -> false, false -> true).
-     * Eğer değer yoksa 'true' olarak oluşturur.
-     */
     toggle(key: string): Promise<boolean>;
+    rename(oldKey: string, newKey: string): Promise<boolean>;
 
     /**
-     * Bir anahtarın ismini değiştirir.
-     * @throws Yeni anahtar ismi zaten varsa hata fırlatır.
+     * Veritabanından rastgele veri(ler) getirir.
+     * @param count İstenen veri sayısı (Varsayılan: 1)
+     * @returns Tek veri veya veri listesi
      */
-    rename(oldKey: string, newKey: string): Promise<boolean>;
+    random<T = any>(count?: number): Promise<T | T[] | null>;
 
     all<T = any>(options?: AllOptions): Record<string, T> | Record<string, StoredEntry<T>>;
     clear(): Promise<boolean>;

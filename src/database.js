@@ -28,7 +28,6 @@ class UsemiDB {
     this.autoSave = options.autoSave ?? true;
     this.autoCleanInterval = options.autoCleanInterval ?? 60_000;
     
-    // Performans: Yazma gecikmesi
     this.writeDelay = options.writeDelay ?? 100; 
     this._saveTimer = null;
 
@@ -85,7 +84,6 @@ class UsemiDB {
 
   async save() {
     if (!this.autoSave) return;
-    
     if (this._saveTimer) clearTimeout(this._saveTimer);
 
     this._saveTimer = setTimeout(async () => {
@@ -202,7 +200,6 @@ class UsemiDB {
     let entry = this.data[key];
     let currentVal = (entry && typeof entry.v === 'number') ? entry.v : 0;
     
-    // Mevcut TTL süresini korumak için (Varsa)
     let remainingTTL = null;
     if(entry && entry.e) {
         const timeLeft = entry.e - Date.now();
@@ -219,13 +216,11 @@ class UsemiDB {
     return this.add(key, -count);
   }
 
-  // 🔥 YENİ: Toggle (Boolean Değiştirici)
   async toggle(key) {
       const entry = this.data[key];
-      const currentVal = entry ? !!entry.v : false; // Yoksa false kabul et
+      const currentVal = entry ? !!entry.v : false;
       const newVal = !currentVal;
       
-      // TTL koruma mantığı
       let remainingTTL = null;
       if(entry && entry.e) {
           const timeLeft = entry.e - Date.now();
@@ -236,7 +231,6 @@ class UsemiDB {
       return newVal;
   }
 
-  // 🔥 YENİ: Rename (İsim Değiştirme)
   async rename(oldKey, newKey) {
       if(!this.has(oldKey)) return false;
       if(this.has(newKey)) throw new Error(`UsemiDB: "${newKey}" anahtarı zaten var, üzerine yazamam.`);
@@ -248,6 +242,22 @@ class UsemiDB {
       await this.save();
       this._emit("rename", oldKey, newKey);
       return true;
+  }
+
+  // 🔥 YENİ: RANDOM (Rastgele Veri)
+  async random(count = 1) {
+    const keys = Object.keys(this.data).filter(k => !this._isExpiredEntry(this.data[k]));
+    if (keys.length === 0) return count === 1 ? null : [];
+
+    if (count === 1) {
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        return this.data[randomKey].v;
+    }
+
+    // Shuffle (Karıştır)
+    const shuffled = keys.sort(() => 0.5 - Math.random());
+    const selectedKeys = shuffled.slice(0, count);
+    return selectedKeys.map(k => this.data[k].v);
   }
 
   all({ includeMeta = false } = {}) {
@@ -296,10 +306,26 @@ class UsemiCollection {
   async pull(key, value) { return this.db.pull(this._key(key), value); }
   async add(key, count) { return this.db.add(this._key(key), count); }
   async subtract(key, count) { return this.db.subtract(this._key(key), count); }
-  
-  // Collection için toggle ve rename
   async toggle(key) { return this.db.toggle(this._key(key)); }
   async rename(oldKey, newKey) { return this.db.rename(this._key(oldKey), this._key(newKey)); }
+
+  // 🔥 Collection için RANDOM
+  async random(count = 1) {
+    // Sadece bu collection'a ait keyleri filtrele
+    const allKeys = Object.keys(this.db.data);
+    const colKeys = allKeys.filter(k => k.startsWith(this.name + ":") && !this.db._isExpiredEntry(this.db.data[k]));
+    
+    if (colKeys.length === 0) return count === 1 ? null : [];
+
+    if (count === 1) {
+        const randomKey = colKeys[Math.floor(Math.random() * colKeys.length)];
+        return this.db.data[randomKey].v;
+    }
+
+    const shuffled = colKeys.sort(() => 0.5 - Math.random());
+    const selectedKeys = shuffled.slice(0, count);
+    return selectedKeys.map(k => this.db.data[k].v);
+  }
 
   all() {
     const out = {};

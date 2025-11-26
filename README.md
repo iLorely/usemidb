@@ -23,8 +23,6 @@ TTL (zaman aşımı), otomatik yedekleme, event sistemi, **gelişmiş matematiks
 ## 🔹 Örnek Kullanım
 
 ```bash
-npm install usemidb
-🔹 HIZLI BAŞLANGIÇ
 JavaScript
 
 const UsemiDB = require("usemidb");
@@ -57,6 +55,14 @@ const db = new UsemiDB({
     await db.pull("etiketler", "python"); 
     console.log(db.get("etiketler")); // ["javascript", "nodejs"]
 
+    // 🟢 Rastgele Veri Çekme (Random)
+    // Çekilişler veya rastgele eşya sistemleri için idealdir.
+    const randomUser = await db.random(); 
+    console.log(randomUser); // Tek bir rastgele değer döner.
+
+    const luckyWinners = await db.random(3);
+    console.log(luckyWinners); // Rastgele 3 değerden oluşan bir liste döner.
+
     // 🟢 Toggle (Aç/Kapat)
     // "bakim_modu" yoksa oluşturur ve true yapar, varsa tersine çevirir.
     await db.toggle("bakim_modu"); 
@@ -66,8 +72,11 @@ const db = new UsemiDB({
     await db.rename("user_1", "admin_1");
     console.log(db.get("admin_1")); // { name: "Lorely" }
 })();
-🗂️ Collection (Namespace) Kullanımı
+```
+
+## 🗂️ Collection (Namespace) Kullanımı
 Verilerinizi kategorize etmek (örn: kullanıcılar, sunucular, ayarlar) için collection sistemini kullanabilirsiniz.
+```bash
 
 JavaScript
 
@@ -82,9 +91,11 @@ await users.add("ahmet_para", 500);
 
 // Sadece bu koleksiyondaki verileri çek
 console.log(users.all()); 
-📡 Event (Olay) Sistemi
-Veritabanında gerçekleşen değişiklikleri dinleyebilirsiniz.
+```
 
+## 📡 Event (Olay) Sistemi
+Veritabanında gerçekleşen değişiklikleri dinleyebilirsiniz.
+```bash
 JavaScript
 
 db.on("set", (key, value) => {
@@ -98,7 +109,10 @@ db.on("expired", (key) => {
 db.on("rename", (oldKey, newKey) => {
   console.log(`[DEĞİŞTİ] ${oldKey} -> ${newKey} oldu.`);
 });
-📊 İstatistikler
+```
+
+## 📊 İstatistikler
+```bash
 JavaScript
 
 console.log(db.stats());
