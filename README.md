@@ -8,7 +8,9 @@ TTL (zaman aşımı), otomatik yedekleme, event sistemi, **gelişmiş matematiks
 ## ⚡ Özellikler
 
 - **Key-Value Store**: Basit `set`, `get`, `delete`, `has`, `push` metodları.
-- **Matematiksel İşlemler**: `add`, `subtract` ile tek satırda bakiye yönetimi.
+- **Gelişmiş Arama**: `find` ve `findOne` ile veriler içinde obje tabanlı sorgulama.
+- **Matematiksel İşlemler**: `add`, `subtract`, `multiply`, `divide` ile tam kapsamlı işlem yeteneği.
+- **Rastgele Veri (Random)**: Veritabanından rastgele veri veya veri grubu çekme.
 - **Akıllı Liste Yönetimi**: `push` ile ekle, `pull` ile listeden veri sil.
 - **Toggle & Rename**: Boolean değerleri tersine çevirme ve anahtar adı değiştirme.
 - **Performans**: `writeDelay` ile disk yazma işlemleri optimize edilmiştir (Debounce).
@@ -22,9 +24,9 @@ TTL (zaman aşımı), otomatik yedekleme, event sistemi, **gelişmiş matematiks
 
 ## 🔹 Örnek Kullanım
 
-```bash
-JavaScript
+### HIZLI BAŞLANGIÇ
 
+```javascript
 const UsemiDB = require("usemidb");
 const db = new UsemiDB({
   filePath: "./database/data.json", // Kayıt dosyası
@@ -35,16 +37,27 @@ const db = new UsemiDB({
 
 (async () => {
     // 🟢 Basit Veri Kaydı (TTL: 10 saniye)
-    await db.set("user_1", { name: "Lorely" }, 10000);
+    await db.set("user_1", { name: "Lorely", role: "admin" }, 10000);
     
     const user = db.get("user_1");
-    console.log(user); // { name: "Lorely" }
+    console.log(user); // { name: "Lorely", role: "admin" }
 
-    // 🟢 Matematiksel İşlemler (Para/XP Sistemi)
+    // 🟢 Matematiksel İşlemler (Topla, Çıkar, Çarp, Böl)
     await db.set("bakiye", 100);
-    await db.add("bakiye", 50);      // 150 olur
-    await db.subtract("bakiye", 20); // 130 olur
+    await db.add("bakiye", 50);      // 150
+    await db.subtract("bakiye", 20); // 130
+    await db.multiply("bakiye", 2);  // 260 (2 ile çarp)
+    await db.divide("bakiye", 2);    // 130 (2'ye böl)
     console.log(db.get("bakiye"));   // 130
+
+    // 🟢 Gelişmiş Arama (Find & FindOne)
+    // Rolü 'admin' olanları bul
+    const admins = db.find({ role: "admin" });
+    console.log(admins); // [{ key: "user_1", value: { ... } }]
+
+    // İsmi 'Lorely' olan tek bir kişiyi bul
+    const lorely = db.findOne({ name: "Lorely" });
+    console.log(lorely);
 
     // 🟢 Liste (Array) İşlemleri
     await db.push("etiketler", "javascript");
@@ -70,7 +83,7 @@ const db = new UsemiDB({
 
     // 🟢 Rename (Anahtar Adı Değiştirme)
     await db.rename("user_1", "admin_1");
-    console.log(db.get("admin_1")); // { name: "Lorely" }
+    console.log(db.get("admin_1")); // { name: "Lorely", ... }
 })();
 ```
 
@@ -78,25 +91,26 @@ const db = new UsemiDB({
 Verilerinizi kategorize etmek (örn: kullanıcılar, sunucular, ayarlar) için collection sistemini kullanabilirsiniz.
 ```bash
 
-JavaScript
-
 // "users" adında bir koleksiyon oluştur
 const users = db.collection("users");
 
 // Veriler otomatik olarak "users:ahmet" şeklinde saklanır
-await users.set("ahmet", { age: 25 });
+await users.set("ahmet", { age: 25, role: "user" });
+
+// Koleksiyon içinde arama yap
+const result = users.find({ age: 25 });
+console.log(result);
 
 // Koleksiyona özel matematik işlemi
 await users.add("ahmet_para", 500);
 
 // Sadece bu koleksiyondaki verileri çek
-console.log(users.all()); 
+console.log(users.all());
 ```
 
 ## 📡 Event (Olay) Sistemi
 Veritabanında gerçekleşen değişiklikleri dinleyebilirsiniz.
 ```bash
-JavaScript
 
 db.on("set", (key, value) => {
   console.log(`[KAYIT] ${key} eklendi:`, value);
@@ -113,7 +127,6 @@ db.on("rename", (oldKey, newKey) => {
 
 ## 📊 İstatistikler
 ```bash
-JavaScript
 
 console.log(db.stats());
 /* Çıktı:

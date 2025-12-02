@@ -3,17 +3,13 @@ declare module "usemidb" {
   interface UsemiDBOptions {
     filePath?: string;
     autoSave?: boolean;
-    autoCleanInterval?: number; // ms
-    /**
-     * Performans için yazma gecikmesi (ms).
-     * Varsayılan: 100ms
-     */
+    autoCleanInterval?: number;
     writeDelay?: number;
   }
 
   interface StoredEntry<T = any> {
     v: T;
-    e: number | null; // expiresAt timestamp
+    e: number | null;
   }
 
   interface Stats {
@@ -33,6 +29,11 @@ declare module "usemidb" {
     includeMeta?: boolean;
   }
 
+  interface QueryResult<T = any> {
+      key: string;
+      value: T;
+  }
+
   /** ✅ Collection API */
   interface CollectionOps<T = any> {
     set(id: string, data: T, ttlMs?: number): Promise<boolean>;
@@ -41,16 +42,19 @@ declare module "usemidb" {
     delete(id: string): Promise<boolean>;
     push(id: string, value: any): Promise<any[]>;
     pull(id: string, value: any): Promise<boolean>;
+    
     add(id: string, count: number): Promise<number>;
     subtract(id: string, count: number): Promise<number>;
+    multiply(id: string, count: number): Promise<number>;
+    divide(id: string, count: number): Promise<number>;
+    
     toggle(id: string): Promise<boolean>;
     rename(oldId: string, newId: string): Promise<boolean>;
-
-    /**
-     * Koleksiyon içinden rastgele veri(ler) getirir.
-     * @param count İstenen veri sayısı (Varsayılan: 1)
-     */
     random(count?: number): Promise<T | T[] | null>;
+
+    /** Obje özelliklerine göre arama yapar */
+    find(query: Partial<T> | any): QueryResult<T>[];
+    findOne(query: Partial<T> | any): QueryResult<T> | null;
 
     all(): Record<string, T>;
     clear(): Promise<boolean>;
@@ -65,17 +69,26 @@ declare module "usemidb" {
     delete(key: string): Promise<boolean>;
     push<T = any>(key: string, value: T): Promise<T[]>;
     pull<T = any>(key: string, value: T): Promise<boolean>;
+    
     add(key: string, count: number): Promise<number>;
     subtract(key: string, count: number): Promise<number>;
+    multiply(key: string, count: number): Promise<number>;
+    divide(key: string, count: number): Promise<number>;
+
     toggle(key: string): Promise<boolean>;
     rename(oldKey: string, newKey: string): Promise<boolean>;
+    random<T = any>(count?: number): Promise<T | T[] | null>;
 
     /**
-     * Veritabanından rastgele veri(ler) getirir.
-     * @param count İstenen veri sayısı (Varsayılan: 1)
-     * @returns Tek veri veya veri listesi
+     * Değere veya obje özelliklerine göre arama yapar.
+     * Örnek: db.find({ role: "admin" })
      */
-    random<T = any>(count?: number): Promise<T | T[] | null>;
+    find<T = any>(query: Partial<T> | any): QueryResult<T>[];
+
+    /**
+     * İlk eşleşen sonucu getirir.
+     */
+    findOne<T = any>(query: Partial<T> | any): QueryResult<T> | null;
 
     all<T = any>(options?: AllOptions): Record<string, T> | Record<string, StoredEntry<T>>;
     clear(): Promise<boolean>;

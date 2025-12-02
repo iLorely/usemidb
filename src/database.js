@@ -27,10 +27,8 @@ class UsemiDB {
     this.backupFile = this.filePath + ".bak";
     this.autoSave = options.autoSave ?? true;
     this.autoCleanInterval = options.autoCleanInterval ?? 60_000;
-    
     this.writeDelay = options.writeDelay ?? 100; 
     this._saveTimer = null;
-
     this.events = {};
     this._startTime = Date.now();
     this.data = {};
@@ -60,12 +58,8 @@ class UsemiDB {
           fs.writeFileSync(this.filePath, braw, "utf-8");
           const parsed = JSON.parse(braw);
           this.data = this._normalizeLoaded(parsed);
-        } catch {
-          this.data = {};
-        }
-      } else {
-        this.data = {};
-      }
+        } catch { this.data = {}; }
+      } else { this.data = {}; }
     }
   }
 
@@ -85,17 +79,12 @@ class UsemiDB {
   async save() {
     if (!this.autoSave) return;
     if (this._saveTimer) clearTimeout(this._saveTimer);
-
     this._saveTimer = setTimeout(async () => {
         try {
-            if (fs.existsSync(this.filePath)) {
-                await fs.promises.copyFile(this.filePath, this.backupFile);
-            }
+            if (fs.existsSync(this.filePath)) await fs.promises.copyFile(this.filePath, this.backupFile);
             const content = JSON.stringify(this.data, null, 2);
             await fs.promises.writeFile(this.filePath, content, "utf-8");
-        } catch (err) {
-            console.error("UsemiDB Save Error:", err);
-        }
+        } catch (err) { console.error("UsemiDB Save Error:", err); }
     }, this.writeDelay);
   }
 
@@ -105,9 +94,7 @@ class UsemiDB {
     return () => this.off(eventName, cb);
   }
 
-  off(eventName, cb) {
-    this.events[eventName]?.delete(cb);
-  }
+  off(eventName, cb) { this.events[eventName]?.delete(cb); }
 
   _emit(eventName, ...args) {
     for (const cb of Array.from(this.events[eventName] ?? [])) try { cb(...args); } catch {}
@@ -125,9 +112,7 @@ class UsemiDB {
     if (this._cleaner.unref) this._cleaner.unref();
   }
 
-  _isExpiredEntry(entry) {
-    return entry.e !== null && Date.now() >= entry.e;
-  }
+  _isExpiredEntry(entry) { return entry.e !== null && Date.now() >= entry.e; }
 
   _cleanExpiredSync() {
     const removed = [];
@@ -156,12 +141,7 @@ class UsemiDB {
     return entry.v;
   }
 
-  has(key) {
-    const entry = this.data[key];
-    if (!entry) return false;
-    if (this._isExpiredEntry(entry)) { delete this.data[key]; this.save().catch(() => {}); this._emit("expired", key); return false; }
-    return true;
-  }
+  has(key) { return !!this.get(key); }
 
   async delete(key) {
     const entry = this.data[key];
@@ -195,8 +175,8 @@ class UsemiDB {
     return false;
   }
 
-  async add(key, count) {
-    if(typeof count !== 'number') throw new Error("UsemiDB: .add() için sayısal değer girin.");
+  async _math(key, count, operator) {
+    if(typeof count !== 'number') throw new Error(`UsemiDB: .${operator}() için sayısal değer girin.`);
     let entry = this.data[key];
     let currentVal = (entry && typeof entry.v === 'number') ? entry.v : 0;
     
@@ -206,58 +186,78 @@ class UsemiDB {
         if(timeLeft > 0) remainingTTL = timeLeft;
     }
 
-    const newVal = currentVal + count;
+    let newVal = currentVal;
+    if (operator === 'add') newVal += count;
+    if (operator === 'subtract') newVal -= count;
+    if (operator === 'multiply') newVal *= count;
+    if (operator === 'divide') newVal /= count;
+
     await this.set(key, newVal, remainingTTL);
     return newVal;
   }
 
-  async subtract(key, count) {
-    if(typeof count !== 'number') throw new Error("UsemiDB: .subtract() için sayısal değer girin.");
-    return this.add(key, -count);
-  }
+  async add(key, count) { return this._math(key, count, 'add'); }
+  async subtract(key, count) { return this._math(key, count, 'subtract'); }
+  
+  async multiply(key, count) { return this._math(key, count, 'multiply'); }
+  
+  async divide(key, count) { return this._math(key, count, 'divide'); }
 
   async toggle(key) {
       const entry = this.data[key];
       const currentVal = entry ? !!entry.v : false;
       const newVal = !currentVal;
-      
       let remainingTTL = null;
       if(entry && entry.e) {
           const timeLeft = entry.e - Date.now();
           if(timeLeft > 0) remainingTTL = timeLeft;
       }
-      
       await this.set(key, newVal, remainingTTL);
       return newVal;
   }
 
   async rename(oldKey, newKey) {
       if(!this.has(oldKey)) return false;
-      if(this.has(newKey)) throw new Error(`UsemiDB: "${newKey}" anahtarı zaten var, üzerine yazamam.`);
-
+      if(this.has(newKey)) throw new Error(`UsemiDB: "${newKey}" zaten var.`);
       const entry = this.data[oldKey];
       this.data[newKey] = entry;
       delete this.data[oldKey];
-      
       await this.save();
       this._emit("rename", oldKey, newKey);
       return true;
   }
 
-  // 🔥 YENİ: RANDOM (Rastgele Veri)
   async random(count = 1) {
     const keys = Object.keys(this.data).filter(k => !this._isExpiredEntry(this.data[k]));
     if (keys.length === 0) return count === 1 ? null : [];
-
-    if (count === 1) {
-        const randomKey = keys[Math.floor(Math.random() * keys.length)];
-        return this.data[randomKey].v;
-    }
-
-    // Shuffle (Karıştır)
+    if (count === 1) return this.data[keys[Math.floor(Math.random() * keys.length)]].v;
     const shuffled = keys.sort(() => 0.5 - Math.random());
-    const selectedKeys = shuffled.slice(0, count);
-    return selectedKeys.map(k => this.data[k].v);
+    return shuffled.slice(0, count).map(k => this.data[k].v);
+  }
+
+  find(queryObj) {
+      const results = [];
+      const keys = Object.keys(this.data);
+      for(const k of keys) {
+          if(this._isExpiredEntry(this.data[k])) continue;
+          const val = this.data[k].v;
+          
+          if(typeof queryObj === 'object' && val && typeof val === 'object') {
+              let match = true;
+              for(const qKey of Object.keys(queryObj)) {
+                  if(val[qKey] !== queryObj[qKey]) { match = false; break; }
+              }
+              if(match) results.push({ key: k, value: val });
+          } else if (val === queryObj) {
+              results.push({ key: k, value: val });
+          }
+      }
+      return results;
+  }
+
+  findOne(queryObj) {
+      const res = this.find(queryObj);
+      return res.length > 0 ? res[0] : null;
   }
 
   all({ includeMeta = false } = {}) {
@@ -275,9 +275,7 @@ class UsemiDB {
     return true;
   }
 
-  query(filterFn) {
-    return query(this.data, filterFn);
-  }
+  query(filterFn) { return query(this.data, filterFn); }
 
   stats() {
     const keys = Object.keys(this.data);
@@ -302,29 +300,28 @@ class UsemiCollection {
   has(key) { return this.db.has(this._key(key)); }
   async delete(key) { return this.db.delete(this._key(key)); }
   async push(key, value) { return this.db.push(this._key(key), value); }
-  
   async pull(key, value) { return this.db.pull(this._key(key), value); }
+  
   async add(key, count) { return this.db.add(this._key(key), count); }
   async subtract(key, count) { return this.db.subtract(this._key(key), count); }
+  async multiply(key, count) { return this.db.multiply(this._key(key), count); }
+  async divide(key, count) { return this.db.divide(this._key(key), count); }
+
   async toggle(key) { return this.db.toggle(this._key(key)); }
   async rename(oldKey, newKey) { return this.db.rename(this._key(oldKey), this._key(newKey)); }
+  async random(count = 1) { return this.db.collection(this.name).random(count); }
 
-  // 🔥 Collection için RANDOM
-  async random(count = 1) {
-    // Sadece bu collection'a ait keyleri filtrele
-    const allKeys = Object.keys(this.db.data);
-    const colKeys = allKeys.filter(k => k.startsWith(this.name + ":") && !this.db._isExpiredEntry(this.db.data[k]));
-    
-    if (colKeys.length === 0) return count === 1 ? null : [];
+  find(queryObj) {
+      const allRes = this.db.find(queryObj);
+      return allRes.filter(item => item.key.startsWith(this.name + ":")).map(item => ({
+          key: item.key.replace(this.name + ":", ""),
+          value: item.value
+      }));
+  }
 
-    if (count === 1) {
-        const randomKey = colKeys[Math.floor(Math.random() * colKeys.length)];
-        return this.db.data[randomKey].v;
-    }
-
-    const shuffled = colKeys.sort(() => 0.5 - Math.random());
-    const selectedKeys = shuffled.slice(0, count);
-    return selectedKeys.map(k => this.db.data[k].v);
+  findOne(queryObj) {
+      const res = this.find(queryObj);
+      return res.length > 0 ? res[0] : null;
   }
 
   all() {
