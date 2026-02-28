@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const NamespaceManager = require("./namespace.js");
-const dot = require("./utils.js"); // 🔥 Yeni utils dosyamızı çektik
+const dot = require("./utils.js");
+const { matchQuery } = require("./filter.js");
 
 function query(store, filterFn) {
   if (typeof filterFn !== "function") throw new Error("filterFn fonksiyon olmalı");
@@ -386,21 +387,19 @@ class UsemiDB {
     const shuffled = keys.sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count).map(k => this.data[k].v);
   }
-
+  
   find(queryObj) {
       const results = [];
       const keys = Object.keys(this.data);
+      
       for(const k of keys) {
           if(this._isExpiredEntry(this.data[k])) continue;
           const val = this.data[k].v;
-          if(typeof queryObj === 'object' && val && typeof val === 'object') {
-              let match = true;
-              for(const qKey of Object.keys(queryObj)) { 
-                  // Nested sorgu desteği basit seviyede eklenebilir veya direkt root property bakılır
-                  if(val[qKey] !== queryObj[qKey]) { match = false; break; } 
-              }
-              if(match) results.push({ key: k, value: val });
-          } else if (val === queryObj) { results.push({ key: k, value: val }); }
+          
+          // Yeni filtreleme motorumuzu kullanıyoruz
+          if(matchQuery(val, queryObj)) {
+              results.push({ key: k, value: val });
+          }
       }
       return results;
   }

@@ -2,13 +2,14 @@
 
 UsemiDB, Node.js projeleri için **hafif, yüksek performanslı ve JSON tabanlı bir key-value database** sistemidir.
 
-**v0.1.4 Güncellemesi ile artık Nokta Notasyonu (Dot Notation) destekliyor!** 🎯
-İç içe geçmiş verileri (Nested Objects) yönetmek, matematiksel işlemler yapmak, yedek almak ve gelişmiş aramalar yapmak hiç bu kadar kolay olmamıştı.
+**v0.1.7 Güncellemesi ile artık MongoDB Tarzı Gelişmiş Filtreleme destekliyor!** 🎛️
+İç içe geçmiş verileri nokta notasyonu ile yönetmek, detaylı sorgular ($gt, $includes vb.) yapmak, matematiksel işlemler uygulamak ve yedek almak hiç bu kadar kolay olmamıştı.
 
 ---
 
 ## ⚡ Özellikler
 
+- **🎛️ Gelişmiş Filtreleme (Yeni)**: `$gt`, `$lt`, `$in`, `$includes` gibi MongoDB tarzı operatörlerle detaylı veri sorgulama.
 - **🎯 Dot Notation**: `user.settings.theme` gibi iç içe verilere doğrudan erişim ve güncelleme.
 - **🛡️ Snapshot & Restore**: İstediğiniz an veritabanının yedeğini alın (`backup`) ve geri dönün (`restore`).
 - **🔎 Gelişmiş Arama**: `find` ve `findOne` ile obje özelliklerine göre hızlıca veri bulun.
@@ -27,8 +28,8 @@ UsemiDB, Node.js projeleri için **hafif, yüksek performanslı ve JSON tabanlı
 const UsemiDB = require("usemidb");
 
 const db = new UsemiDB({
-  filePath: "./database/data.json", // Veri dosyası
-  backupPath: "./database/backups", // Yedek klasörü
+  filePath: "./usemidb/usemidb.json", // Veri dosyası
+  backupPath: "./usemidb/backups", // Yedek klasörü
   writeDelay: 100,                  // Performans için yazma gecikmesi (ms)
   autoCleanInterval: 60000          // TTL kontrol aralığı (ms)
 });
@@ -123,6 +124,25 @@ db.on("expired", (key) => {
   console.log(`[TTL] ${key} süresi doldu ve silindi.`);
 });
 ```
+
+### 8. 🎛️ Gelişmiş Filtreleme (MongoDB Operatörleri)
+Arama yaparken sadece birebir eşleşme değil; büyüktür, küçüktür, içerir gibi detaylı şartlar kullanabilirsiniz. Nokta notasyonu ile tam uyumludur!
+
+```javascript
+// Leveli 50'den BÜYÜK olanları getir ($gt)
+const proPlayers = db.find({ "stats.level": { $gt: 50 } });
+
+// İsminde "Ahmet" GEÇENLERİ getir ($includes)
+const ahmetler = db.find({ "username": { $includes: "Ahmet" } });
+
+// Şununla BAŞLAYANLARI getir ($startsWith)
+const botKullanicilari = db.find({ "username": { $startsWith: "Bot_" } });
+
+// Rolü admin VEYA mod olanları getir ($in)
+const yetkililer = db.find({ "role": { $in: ["admin", "mod"] } });
+
+// Bakiyesi 1000 ile 5000 arasında olanları getir ($gt, $lt)
+const ortaSınıf = db.find({ "bakiye": { $gt: 1000, $lt: 5000 } });
 
 ---
 
