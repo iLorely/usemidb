@@ -9,7 +9,8 @@ UsemiDB, Node.js projeleri için **hafif, yüksek performanslı ve JSON tabanlı
 
 ## ⚡ Özellikler
 
-- **🎛️ Gelişmiş Filtreleme (Yeni)**: `$gt`, `$lt`, `$in`, `$includes` gibi MongoDB tarzı operatörlerle detaylı veri sorgulama.
+- **🛡️ Schema (Yeni)**: Verilerinizi güvenceye alın, yanlış veri tipi girildiğinde veritabanının bozulmasını önleyin.
+- **🎛️ Gelişmiş Filtreleme**: `$gt`, `$lt`, `$in`, `$includes` gibi MongoDB tarzı operatörlerle detaylı veri sorgulama.
 - **🎯 Dot Notation**: `user.settings.theme` gibi iç içe verilere doğrudan erişim ve güncelleme.
 - **🛡️ Snapshot & Restore**: İstediğiniz an veritabanının yedeğini alın (`backup`) ve geri dönün (`restore`).
 - **🔎 Gelişmiş Arama**: `find` ve `findOne` ile obje özelliklerine göre hızlıca veri bulun.
@@ -144,6 +145,29 @@ const yetkililer = db.find({ "role": { $in: ["admin", "mod"] } });
 // Bakiyesi 1000 ile 5000 arasında olanları getir ($gt, $lt)
 const ortaSınıf = db.find({ "bakiye": { $gt: 1000, $lt: 5000 } });
 
+
+### 9. 🛡️ Schema Validation (Veri Doğrulama Kalkanı)
+Veritabanınıza yanlış veri girilmesini önleyin. Eğer kural dışı bir veri girilirse UsemiDB anında işlemi durdurup sizi uyarır.
+
+```"bakiye" anahtarı HER ZAMAN sayı (number) olmak zorundadır!
+db.schema.define("bakiye", "number");
+
+"users" ile başlayan her şey bu şemaya uymalıdır!
+db.schema.define("users", {
+    username: "string",
+    age: "number",
+    isBanned: "boolean"
+});
+
+// Başarılı işlem:
+await db.set("bakiye", 1500); 
+
+// BAŞARISIZ İŞLEM (Hata Fırlatır ve Kaydetmez!):
+await db.set("bakiye", "bin beş yüz"); 
+// ❌ HATA: [UsemiDB Güvenlik Kalkanı] 'bakiye' verisi 'number' tipinde olmalıdır!
+
+await db.set("users:1", { username: "Lorely", age: "Yirmi" });
+// ❌ HATA: [UsemiDB Güvenlik Kalkanı] 'users:1.age' verisi 'number' tipinde olmalıdır!
 ---
 
 ## 💻 Kurulum

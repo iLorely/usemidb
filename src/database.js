@@ -3,6 +3,7 @@ const path = require("path");
 const NamespaceManager = require("./namespace.js");
 const dot = require("./utils.js");
 const { matchQuery } = require("./filter.js");
+const SchemaValidator = require("./schema.js");
 
 function query(store, filterFn) {
   if (typeof filterFn !== "function") throw new Error("filterFn fonksiyon olmalı");
@@ -29,6 +30,13 @@ class UsemiDB {
     this.events = {};
     this._startTime = Date.now();
     this.data = {};
+    this.events = {};
+    this._startTime = Date.now();
+    this.data = {};
+
+    this.schema = new SchemaValidator();
+
+    this._ensureFile();
 
     this._ensureFile();
     this._load();
@@ -132,8 +140,14 @@ class UsemiDB {
     return removed;
   }
 
-  // --- CRUD (DOT NOTATION DESTEKLİ) ---
+// --- CRUD (DOT NOTATION DESTEKLİ) ---
   async set(key, value, ttlMs = null) {
+    // 🛡️ GÜVENLİK KALKANI: Kaydetmeden önce veriyi test et!
+    // Eğer şemaya uymuyorsa burada hata fırlatır ve aşağıdaki kodlar ÇALIŞMAZ (veri bozulmaz).
+    if (this.schema) {
+        this.schema.validate(key, value);
+    }
+
     const { root, path } = this._splitKey(key);
     const expiresAt = typeof ttlMs === "number" && ttlMs > 0 ? Date.now() + ttlMs : null;
 
@@ -155,6 +169,7 @@ class UsemiDB {
         dot.set(entry.v, path, value);
     }
 
+    // Veri başarıyla hafızaya yazıldıktan sonra diske kaydet ve eventi tetikle
     await this.save();
     this._emit("set", key, value);
     return true;

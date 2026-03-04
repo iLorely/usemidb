@@ -35,7 +35,6 @@ declare module "usemidb" {
     includeMeta?: boolean;
   }
 
-  // 🔥 YENİ: MongoDB Tarzı Arama Operatörleri
   type FilterOperators<T> = {
     $eq?: T;                   // Eşittir
     $ne?: T;                   // Eşit Değildir
@@ -54,6 +53,11 @@ declare module "usemidb" {
   type QueryParam<T = any> = {
     [key: string]: any | FilterOperators<any>;
   } | FilterOperators<any> | any;
+
+  type SchemaTypes = "string" | "number" | "boolean" | "array" | "object";
+  interface SchemaDefinition {
+      [key: string]: SchemaTypes;
+  }
 
   interface CollectionOps<T = any> {
     set(id: string, data: T, ttlMs?: number): Promise<boolean>;
@@ -79,6 +83,15 @@ declare module "usemidb" {
     clear(): Promise<boolean>;
   }
 
+  class SchemaValidator {
+      /**
+       * Veritabanı için veri doğrulama kuralı tanımlar.
+       * @example db.schema.define("bakiye", "number");
+       * @example db.schema.define("users", { name: "string", age: "number" });
+       */
+      define(keyOrPrefix: string, typeOrSchema: SchemaTypes | SchemaDefinition): void;
+  }
+
   class UsemiDB {
     constructor(options?: UsemiDBOptions);
     set<T = any>(key: string, value: T, ttlMs?: number): Promise<boolean>;
@@ -96,7 +109,7 @@ declare module "usemidb" {
     rename(oldKey: string, newKey: string): Promise<boolean>;
     random<T = any>(count?: number): Promise<T | T[] | null>;
     
-    /** * MongoDB tarzı gelişmiş arama yapar.
+    /** * Gelişmiş arama yapar.
      * @example db.find({ "stats.level": { $gt: 10 } })
      * @example db.find({ "role": { $in: ["admin", "mod"] } })
      */
@@ -111,7 +124,9 @@ declare module "usemidb" {
     on(eventName: EventName, callback: EventCallback): () => void;
     off(eventName: EventName, callback: EventCallback): void;
     cleanExpired(): Promise<string[]>;
-    collection<T = any>(namespace: string): CollectionOps<T>;
+    collection<T = any>(namespace: string): CollectionOps<T>
+    
+    schema: SchemaValidator;
   }
 
   export = UsemiDB;
