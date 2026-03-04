@@ -2,8 +2,8 @@
 
 UsemiDB, Node.js projeleri için **hafif, yüksek performanslı ve JSON tabanlı bir key-value database** sistemidir.
 
-**v0.1.7 Güncellemesi ile artık MongoDB Tarzı Gelişmiş Filtreleme destekliyor!** 🎛️
-İç içe geçmiş verileri nokta notasyonu ile yönetmek, detaylı sorgular ($gt, $includes vb.) yapmak, matematiksel işlemler uygulamak ve yedek almak hiç bu kadar kolay olmamıştı.
+**v0.1.8 Güncellemesi ile artık Güçlü Şema Doğrulama (Schema Validation) destekliyor!** 🛡️
+Veritabanınıza hatalı veya istenmeyen veri girilmesini önleyen güvenlik kalkanı, MongoDB tarzı detaylı sorgular ($gt, $includes vb.), iç içe veri yönetimi (Nokta Notasyonu) ve otomatik yedekleme sistemleriyle UsemiDB artık tam profesyonel bir veri yönetim motoru!
 
 ---
 
