@@ -1,6 +1,6 @@
 {
  "name": "usemidb",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Basit, güvenli ve TTL destekli JSON tabanlı Node.js veritabanı",
   "main": "index.js",
   "author": "Lorely",

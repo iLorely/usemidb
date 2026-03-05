@@ -144,12 +144,14 @@ const yetkililer = db.find({ "role": { $in: ["admin", "mod"] } });
 
 // Bakiyesi 1000 ile 5000 arasında olanları getir ($gt, $lt)
 const ortaSınıf = db.find({ "bakiye": { $gt: 1000, $lt: 5000 } });
+```
 
 
 ### 9. 🛡️ Schema Validation (Veri Doğrulama Kalkanı)
 Veritabanınıza yanlış veri girilmesini önleyin. Eğer kural dışı bir veri girilirse UsemiDB anında işlemi durdurup sizi uyarır.
 
-```"bakiye" anahtarı HER ZAMAN sayı (number) olmak zorundadır!
+```bash
+"bakiye" anahtarı HER ZAMAN sayı (number) olmak zorundadır!
 db.schema.define("bakiye", "number");
 
 "users" ile başlayan her şey bu şemaya uymalıdır!
@@ -168,7 +170,6 @@ await db.set("bakiye", "bin beş yüz");
 
 await db.set("users:1", { username: "Lorely", age: "Yirmi" });
 // ❌ HATA: [UsemiDB Güvenlik Kalkanı] 'users:1.age' verisi 'number' tipinde olmalıdır!
-//
 ```
 
 ### 10. İmport Özelliği
