@@ -116,6 +116,14 @@ declare module "usemidb" {
     find<T = any>(query: QueryParam<T>): QueryResult<T>[];
     findOne<T = any>(query: QueryParam<T>): QueryResult<T> | null;
     
+    /**
+     * Başka bir veritabanından veya JSON dosyasından verileri UsemiDB'ye aktarır.
+     * Quick.db formatını ve standart JSON formatını otomatik tanır.
+     * @param data JSON dosya yolu, JSON string, Object veya Quick.db Array formatı.
+     * @param options { clearFirst: true } verilirse eski verileri silip üzerine yazar.
+     */
+    importFrom(data: string | object | any[], options?: { clearFirst?: boolean }): Promise<boolean>;
+    
     backup(name: string): Promise<string>;
     restore(name: string): Promise<boolean>;
     all<T = any>(options?: AllOptions): Record<string, T> | Record<string, StoredEntry<T>>;

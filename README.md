@@ -2,14 +2,14 @@
 
 UsemiDB, Node.js projeleri için **hafif, yüksek performanslı ve JSON tabanlı bir key-value database** sistemidir.
 
-**v0.1.8 Güncellemesi ile artık Güçlü Şema Doğrulama (Schema Validation) destekliyor!** 🛡️
-Veritabanınıza hatalı veya istenmeyen veri girilmesini önleyen güvenlik kalkanı, MongoDB tarzı detaylı sorgular ($gt, $includes vb.), iç içe veri yönetimi (Nokta Notasyonu) ve otomatik yedekleme sistemleriyle UsemiDB artık tam profesyonel bir veri yönetim motoru!
+**v0.1.9 Güncellemesi ile artık Quick.db gibi veritabanlarınızdan UsemiDB'ye importlar gerçekleştire bileceksiniz!** 🌉
 
 ---
 
 ## ⚡ Özellikler
 
-- **🛡️ Schema (Yeni)**: Verilerinizi güvenceye alın, yanlış veri tipi girildiğinde veritabanının bozulmasını önleyin.
+- **🌉 Göç Köprüsü (YENİ)**: Quick.db veya standart JSON dosyalarından tek komutla verilerinizi UsemiDB'ye aktarın.
+- **🛡️ Schema**: Verilerinizi güvenceye alın, yanlış veri tipi girildiğinde veritabanının bozulmasını önleyin.
 - **🎛️ Gelişmiş Filtreleme**: `$gt`, `$lt`, `$in`, `$includes` gibi MongoDB tarzı operatörlerle detaylı veri sorgulama.
 - **🎯 Dot Notation**: `user.settings.theme` gibi iç içe verilere doğrudan erişim ve güncelleme.
 - **🛡️ Snapshot & Restore**: İstediğiniz an veritabanının yedeğini alın (`backup`) ve geri dönün (`restore`).
@@ -129,7 +129,7 @@ db.on("expired", (key) => {
 ### 8. 🎛️ Gelişmiş Filtreleme (MongoDB Operatörleri)
 Arama yaparken sadece birebir eşleşme değil; büyüktür, küçüktür, içerir gibi detaylı şartlar kullanabilirsiniz. Nokta notasyonu ile tam uyumludur!
 
-```javascript
+```bash
 // Leveli 50'den BÜYÜK olanları getir ($gt)
 const proPlayers = db.find({ "stats.level": { $gt: 50 } });
 
@@ -168,6 +168,26 @@ await db.set("bakiye", "bin beş yüz");
 
 await db.set("users:1", { username: "Lorely", age: "Yirmi" });
 // ❌ HATA: [UsemiDB Güvenlik Kalkanı] 'users:1.age' verisi 'number' tipinde olmalıdır!
+//
+```
+
+### 10. İmport Özelliği
+
+# 🌉 Göç Köprüsü (Migration from Quick.db / JSON)
+
+Verilerinizi kaybetmeden UsemiDB'ye geçin! UsemiDB, Quick.db'nin formatını ve standart JSON formatını otomatik tanır.
+
+```bash
+// Seçenek 1: Başka bir JSON dosyasından aktar
+await db.importFrom("./eski_veritabaniniz.json");
+
+// Seçenek 2: Quick.db'den tüm verileri aktar
+const quickdb = require("quick.db");
+await db.importFrom(quickdb.all(), { clearFirst: true }); 
+
+console.log("Göç tamamlandı! Tüm verileriniz artık UsemiDB formatında.");
+```
+
 ---
 
 ## 💻 Kurulum

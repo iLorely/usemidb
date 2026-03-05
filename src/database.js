@@ -222,6 +222,63 @@ class UsemiDB {
 
   async clear() { this.data = {}; await this.save(); this._emit("clear"); return true; }
 
+  // --- GÖÇ KÖPRÜSÜ (MIGRATION BRIDGE) ---
+  async importFrom(data, options = { clearFirst: false }) {
+      if (options.clearFirst) {
+          await this.clear();
+      }
+
+      let parsedData = data;
+
+      // 1. Veri bir dosya yolu veya JSON string ise
+      if (typeof data === 'string') {
+          try {
+              if (fs.existsSync(data)) {
+                  const raw = fs.readFileSync(data, "utf-8");
+                  parsedData = JSON.parse(raw);
+              } else {
+                  parsedData = JSON.parse(data);
+              }
+          } catch (e) {
+              throw new Error("UsemiDB Import Hatası: Geçersiz dosya yolu veya bozuk JSON formatı.");
+          }
+      }
+
+      // 2. Quick.db Formatı Algılayıcı: [{ ID: "user_1", data: "..." }]
+      if (Array.isArray(parsedData)) {
+          for (const item of parsedData) {
+              if (item.ID !== undefined && item.data !== undefined) {
+                  let val = item.data;
+                  // Quick.db bazen objeleri string olarak kaydeder, onu çözelim:
+                  if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+                      try { val = JSON.parse(val); } catch(e) {} 
+                  }
+                  await this.set(item.ID, val);
+              }
+          }
+      } 
+      // 3. Standart JSON Formatı: { "user_1": { "bakiye": 50 } }
+      else if (typeof parsedData === 'object' && parsedData !== null) {
+          for (const key of Object.keys(parsedData)) {
+              const entry = parsedData[key];
+              
+              // Eğer gelen veri zaten UsemiDB formatındaysa (v ve e varsa) direkt al
+              if (entry && typeof entry === 'object' && 'v' in entry && 'e' in entry) {
+                  this.data[key] = entry;
+              } else {
+                  // Normal JSON objesiyse UsemiDB formatına çevirip kaydet
+                  await this.set(key, entry);
+              }
+          }
+          await this.save();
+      } else {
+          throw new Error("UsemiDB Import Hatası: Desteklenmeyen veri formatı.");
+      }
+
+      this._emit("clear"); // Veritabanı baştan aşağı yenilendiği için clear eventi fırlatıyoruz
+      return true;
+  }
+
   // --- ARRAY İŞLEMLERİ (DOT NOTATION DESTEKLİ) ---
   async push(key, value) {
     const { root, path } = this._splitKey(key);
