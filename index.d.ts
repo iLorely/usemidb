@@ -6,6 +6,12 @@ declare module "usemidb" {
     autoSave?: boolean;
     autoCleanInterval?: number;
     writeDelay?: number;
+    /**
+     * 🔐 Veritabanı dosyasını şifrelemek için kullanılacak gizli anahtar (Parola).
+     * Eğer girilirse, data.json dosyası AES-256 ile şifrelenerek okunamaz hale getirilir.
+     * @example "benim-gizli-parolam-123"
+     */
+    encryptionKey?: string;
   }
 
   interface StoredEntry<T = any> {
@@ -55,6 +61,7 @@ declare module "usemidb" {
   } | FilterOperators<any> | any;
 
   type SchemaTypes = "string" | "number" | "boolean" | "array" | "object";
+  
   interface SchemaDefinition {
       [key: string]: SchemaTypes;
   }
@@ -94,6 +101,10 @@ declare module "usemidb" {
 
   class UsemiDB {
     constructor(options?: UsemiDBOptions);
+    
+    /** 🛡️ Veritabanı Şema Yöneticisi (Veri doğrulaması yapar) */
+    schema: SchemaValidator;
+
     set<T = any>(key: string, value: T, ttlMs?: number): Promise<boolean>;
     get<T = any>(key: string): T | null;
     has(key: string): boolean;
@@ -123,7 +134,7 @@ declare module "usemidb" {
      * @param options { clearFirst: true } verilirse eski verileri silip üzerine yazar.
      */
     importFrom(data: string | object | any[], options?: { clearFirst?: boolean }): Promise<boolean>;
-    
+
     backup(name: string): Promise<string>;
     restore(name: string): Promise<boolean>;
     all<T = any>(options?: AllOptions): Record<string, T> | Record<string, StoredEntry<T>>;
@@ -132,9 +143,7 @@ declare module "usemidb" {
     on(eventName: EventName, callback: EventCallback): () => void;
     off(eventName: EventName, callback: EventCallback): void;
     cleanExpired(): Promise<string[]>;
-    collection<T = any>(namespace: string): CollectionOps<T>
-    
-    schema: SchemaValidator;
+    collection<T = any>(namespace: string): CollectionOps<T>;
   }
 
   export = UsemiDB;

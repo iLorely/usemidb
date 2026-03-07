@@ -4,6 +4,7 @@ const NamespaceManager = require("./namespace.js");
 const dot = require("./utils.js");
 const { matchQuery } = require("./filter.js");
 const SchemaValidator = require("./schema.js");
+const cryptoUtil = require("./crypto.js");
 
 function query(store, filterFn) {
   if (typeof filterFn !== "function") throw new Error("filterFn fonksiyon olmalı");
@@ -26,6 +27,7 @@ class UsemiDB {
     this.autoSave = options.autoSave ?? true;
     this.autoCleanInterval = options.autoCleanInterval ?? 60_000;
     this.writeDelay = options.writeDelay ?? 100;
+    this.encryptionKey = options.encryptionKey || null;
     this._saveTimer = null;
     this.events = {};
     this._startTime = Date.now();
@@ -62,8 +64,19 @@ class UsemiDB {
 
   _load() {
     try {
-      const raw = fs.readFileSync(this.filePath, "utf-8");
-      const parsed = JSON.parse(raw);
+      let raw = fs.readFileSync(this.filePath, "utf-8");
+      
+      // Eğer şifreleme anahtarı varsa ve dosya düz JSON ( { ile başlayan ) değilse şifre çözmeyi dene
+      if (this.encryptionKey && raw.trim() !== "" && !raw.trim().startsWith('{')) {
+          try {
+              raw = cryptoUtil.decrypt(raw, this.encryptionKey);
+          } catch (e) {
+              console.error("UsemiDB Hata: Şifre çözülemedi! encryptionKey yanlış olabilir veya veri bozuk.");
+              raw = "{}";
+          }
+      }
+
+      const parsed = JSON.parse(raw || "{}");
       this.data = this._normalizeLoaded(parsed);
     } catch (err) { this.data = {}; }
   }
@@ -84,7 +97,12 @@ class UsemiDB {
     if (this._saveTimer) clearTimeout(this._saveTimer);
     this._saveTimer = setTimeout(async () => {
         try {
-            const content = JSON.stringify(this.data, null, 2);
+            let content = JSON.stringify(this.data, null, 2);
+            
+            if (this.encryptionKey) {
+                content = cryptoUtil.encrypt(content, this.encryptionKey);
+            }
+
             await fs.promises.writeFile(this.filePath, content, "utf-8");
         } catch (err) { console.error("UsemiDB Save Error:", err); }
     }, this.writeDelay);

@@ -2,13 +2,14 @@
 
 UsemiDB, Node.js projeleri için **hafif, yüksek performanslı ve JSON tabanlı bir key-value database** sistemidir.
 
-**v0.1.9 Güncellemesi ile artık Quick.db gibi veritabanlarınızdan UsemiDB'ye importlar gerçekleştire bileceksiniz!** 🌉
+**v0.2.0 AES-256 Veri Şifreleme, Şema Doğrulama ve Gelişmiş Filtreleme!**
 
 ---
 
 ## ⚡ Özellikler
 
-- **🌉 Göç Köprüsü (YENİ)**: Quick.db veya standart JSON dosyalarından tek komutla verilerinizi UsemiDB'ye aktarın.
+- **🔐 Askeri Düzey Şifreleme (YENİ)**: Veritabanı dosyanızı AES-256 ile şifreleyin, dışarıdan okunmasını engelleyin.
+- **🌉 Göç Köprüsü**: Quick.db veya standart JSON dosyalarından tek komutla verilerinizi UsemiDB'ye aktarın.
 - **🛡️ Schema**: Verilerinizi güvenceye alın, yanlış veri tipi girildiğinde veritabanının bozulmasını önleyin.
 - **🎛️ Gelişmiş Filtreleme**: `$gt`, `$lt`, `$in`, `$includes` gibi MongoDB tarzı operatörlerle detaylı veri sorgulama.
 - **🎯 Dot Notation**: `user.settings.theme` gibi iç içe verilere doğrudan erişim ve güncelleme.
@@ -172,9 +173,7 @@ await db.set("users:1", { username: "Lorely", age: "Yirmi" });
 // ❌ HATA: [UsemiDB Güvenlik Kalkanı] 'users:1.age' verisi 'number' tipinde olmalıdır!
 ```
 
-### 10. İmport Özelliği
-
-# 🌉 Göç Köprüsü (Migration from Quick.db / JSON)
+### 10. 🌉 İmport Özelliği (Migration from Quick.db / JSON)
 
 Verilerinizi kaybetmeden UsemiDB'ye geçin! UsemiDB, Quick.db'nin formatını ve standart JSON formatını otomatik tanır.
 
@@ -187,6 +186,22 @@ const quickdb = require("quick.db");
 await db.importFrom(quickdb.all(), { clearFirst: true }); 
 
 console.log("Göç tamamlandı! Tüm verileriniz artık UsemiDB formatında.");
+```
+
+### 11. 🔐 Encryption (Veri Şifreleme)
+
+UsemiDB'yi başlatırken bir encryptionKey (Şifreleme Anahtarı) eklerseniz, JSON dosyanız diske düz metin olarak değil, AES-256 ile şifrelenmiş anlamsız karakterler olarak kaydedilir. Verileriniz %100 güvende kalır.
+
+```bash
+const UsemiDB = require("usemidb");
+
+const db = new UsemiDB({
+  filePath: "./usemidb/usemidb.json", 
+  encryptionKey: "benim-cok-gizli-sifrem-123", // 🔐 Bunu eklemek yeterli
+});
+
+// Artık diske yazılan hiçbir veri dışarıdan (Not Defteri vb. ile) okunamaz!
+await db.set("gizli_token", "ABC-123-XYZ");
 ```
 
 ---
